@@ -58,9 +58,9 @@ void Task2code( void * pvParameters ){
 
   for(;;){
     digitalWrite(led2, HIGH);
-    delay(700);
+    delay(300);
     digitalWrite(led2, LOW);
-    delay(700);
+    delay(300);
   }
 }
 
