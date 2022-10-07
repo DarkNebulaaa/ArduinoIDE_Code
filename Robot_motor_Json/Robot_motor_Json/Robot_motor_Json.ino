@@ -12,7 +12,9 @@ TaskHandle_t Task2 ;// This Task keep track of MotorControl Function
 
 
 /*       global    parameter     */
+ unsigned long lastTime;
 
+ unsigned long TaskTime;
 StaticJsonDocument<300> motorDoc;  //JsonFile recive from TX2
 
 Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();////以這種方式呼叫，它使用預設地址0x40。
@@ -23,8 +25,15 @@ Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();////以這種方式呼�
 
 /*######### Motor parameter ########*/
 
-float move ;
-float turn ;
+
+
+struct motorData
+{
+  float move ;
+  float turn ;
+};
+motorData data;
+
 /*===============================*/
 void setup() {
 
@@ -51,21 +60,21 @@ xTaskCreatePinnedToCore(
                     "ReciveJsonMessage",     /* name of task. */
                     10000,       /* Stack size of task */
                     NULL,        /* parameter of the task */
-                    1,           /* priority of the task */
+                    0,           /* priority of the task */
                     &Task1,      /* Task handle to keep track of created task */
                     0);          /* pin task to core 0 */                  
   delay(500);
 
-xTaskCreatePinnedToCore(
-                    MotorControl,   /* Task function. */
-                    "MotorControl",     /* name of task. */
-                    10000,       /* Stack size of task */
-                    NULL,        /* parameter of the task */
-                    1,           /* priority of the task */
-                    &Task2,      /* Task handle to keep track of created task */
-                    1);          /* pin task to core 0 */                  
+/*xTaskCreatePinnedToCore(
+                    MotorControl,   
+                    "MotorControl",     
+                    10000,      
+                    NULL,        
+                    0,           
+                    &Task2,      
+                    1);                          
   delay(500);
-
+*/
 /*##########################################################################################
 ############################  Initialize the pwm motor  #####################################
 #############################################################################################*/
@@ -87,58 +96,75 @@ void loop() {
 
 void ReciveJsonMessage(void * pvParameters)
 { 
-  for(;;)
+ for(;;)
   {
-      if (Serial2.available()) 
-    {
-    // Allocate the JSON document
-    // This one must be bigger than the sender's because it must store the strings
-    //StaticJsonDocument<300> motorDoc;
+   
+ 
 
-    // Read the JSON document from the "link" serial port
-    DeserializationError err = deserializeJson(motorDoc, Serial2);
+          DeserializationError err = deserializeJson(motorDoc, Serial2);
 
-    if (err == DeserializationError::Ok) 
-    {
-      // Print the values
-      // (we must use as<T>() to resolve the ambiguity)
-      //Serial.print("move = ");
-      //Serial.print(motorDoc["move"].as<float>());
-      move = motorDoc["move"].as<float>();
-      //Serial.print("  ; turnValue = ");
-      //Serial.println(motorDoc["turn"].as<float>());
-      turn = motorDoc["turn"].as<float>();
-    } 
-    else 
-      {
-      // Print error to the "debug" serial port
-         Serial.print("deserializeJson() returned ");
-          Serial.println(err.c_str());
+
+
+
+
+
+          if (err == DeserializationError::Ok) 
+            {
+              // Print the values
+              // (we must use as<T>() to resolve the ambiguity)
+              Serial.print("move = ");
+              Serial.print(motorDoc["move"].as<float>());
+             // move = motorDoc["move"].as<float>();
+              Serial.print("  ; turnValue = ");
+              Serial.println(motorDoc["turn"].as<float>());
+              //turn = motorDoc["turn"].as<float>();
+                while(millis() - lastTime <= TaskTime)
+                {
+                  
+                }
+                 xTaskCreatePinnedToCore(MotorControl, "MotorControl", 10000, NULL, 0, &Task2, 1);
+                 //vTaskDelete(NULL);
+            } 
+          else 
+            {
+              // Print error to the "debug" serial port
+              Serial.print("deserializeJson() returned ");
+              Serial.println(err.c_str());
   
-      // Flush all bytes in the "link" serial port buffer
-          while (Serial2.available() > 0)
-            Serial2.read();
-      }
-    } 
-    delay(1);
-  }
+              // Flush all bytes in the "link" serial port buffer
+               while (Serial2.available() > 0)
+               Serial2.read();
+            }
+         
+          //delay(100);
+       
+   }
+
 }
 
 
 void MotorControl(void *pvParameters)
 {
-  for(;;)
-  {
-    if(move>0)
-    {
-      pwm.setPWM(0, 0, 500);
-      Serial.println(move);
-    }
+  //for(;;)
+ // { 
+      lastTime = millis();
+      if(data.move>0)
+        {
+          //pwm.setPWM(0, 0, 500);
+         // Serial.println(move);
+          
+        }
+
+      else 
+        {
+         // pwm.setPWM(0, 0, 200);
+          // Serial.println(move);
+        }
+        TaskTime = millis() - lastTime;
+      vTaskDelete(NULL);
     
-    else 
-    {
-      pwm.setPWM(0, 0, 200);
-      Serial.println(move);
-    }
-  }
+    
+    
+    
+ // }
 }
