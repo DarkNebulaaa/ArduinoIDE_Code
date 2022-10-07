@@ -1,6 +1,6 @@
 #include <ArduinoJson.h>
-
-
+#include <Wire.h>
+#include "Adafruit_PWMServoDriver.h"
 /*  including file at the upside */
 /*===============================*/
 /*===============================*/
@@ -13,8 +13,18 @@ TaskHandle_t Task2 ;// This Task keep track of MotorControl Function
 
 /*       global    parameter     */
 
-StaticJsonDocument<300> motorDoc;
+StaticJsonDocument<300> motorDoc;  //JsonFile recive from TX2
 
+Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();////以這種方式呼叫，它使用預設地址0x40。
+#define SERVOMIN  150 // this is the 'minimum' pulse length count (out of 4096)
+//這是“最小”脈衝長度計數（在4096）中
+#define SERVOMAX  500 // this is the 'maximum' pulse length count (out of 4096)
+//這是“最大”脈衝長度計數（在4096中）
+
+/*######### Motor parameter ########*/
+
+float move ;
+float turn ;
 /*===============================*/
 void setup() {
 
@@ -56,6 +66,13 @@ xTaskCreatePinnedToCore(
                     1);          /* pin task to core 0 */                  
   delay(500);
 
+/*##########################################################################################
+############################  Initialize the pwm motor  #####################################
+#############################################################################################*/
+
+pwm.begin();
+
+pwm.setPWMFreq(60);
 
 }
 
@@ -85,10 +102,12 @@ void ReciveJsonMessage(void * pvParameters)
     {
       // Print the values
       // (we must use as<T>() to resolve the ambiguity)
-      Serial.print("move = ");
-      Serial.print(motorDoc["move"].as<float>());
-      Serial.print("  ; turnValue = ");
-      Serial.println(motorDoc["turn"].as<float>());
+      //Serial.print("move = ");
+      //Serial.print(motorDoc["move"].as<float>());
+      move = motorDoc["move"].as<float>();
+      //Serial.print("  ; turnValue = ");
+      //Serial.println(motorDoc["turn"].as<float>());
+      turn = motorDoc["turn"].as<float>();
     } 
     else 
       {
@@ -110,6 +129,16 @@ void MotorControl(void *pvParameters)
 {
   for(;;)
   {
-
+    if(move>0)
+    {
+      pwm.setPWM(0, 0, 500);
+      Serial.println(move);
+    }
+    
+    else 
+    {
+      pwm.setPWM(0, 0, 200);
+      Serial.println(move);
+    }
   }
 }
