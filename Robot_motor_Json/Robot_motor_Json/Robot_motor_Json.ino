@@ -27,12 +27,12 @@ Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();////以這種方式呼�
 
 
 
-struct motorData
-{
-  float move ;
-  float turn ;
-};
-motorData data;
+
+
+ volatile float move ;
+ volatile float turn ;
+
+
 
 /*===============================*/
 void setup() {
@@ -49,20 +49,20 @@ void setup() {
 
   // Initialize the "link" serial port
   // Use a low data rate to reduce the error ratio
-  Serial2.begin(115200);
+  //Serial2.begin(115200);
 
   /*##########################################################################################
 ############################  Initialize the ESP32 Task  #####################################
 #############################################################################################*/
 
-xTaskCreatePinnedToCore(
+xTaskCreate(
                     ReciveJsonMessage,   /* Task function. */
                     "ReciveJsonMessage",     /* name of task. */
-                    10000,       /* Stack size of task */
+                    20000,       /* Stack size of task */
                     NULL,        /* parameter of the task */
-                    0,           /* priority of the task */
-                    &Task1,      /* Task handle to keep track of created task */
-                    0);          /* pin task to core 0 */                  
+                    tskIDLE_PRIORITY,           /* priority of the task */
+                    &Task1      /* Task handle to keep track of created task */
+                  );          /* pin task to core 0 */                  
   delay(500);
 
 /*xTaskCreatePinnedToCore(
@@ -86,22 +86,23 @@ pwm.setPWMFreq(60);
 }
 
  
-void loop() {
-
+void loop()
+ {
+   delay(1);
 }
 
 /*##########################################################################################
 ######################################  Function Define ####################################
 ##########################################################################################*/
 
-void ReciveJsonMessage(void * pvParameters)
+void ReciveJsonMessage(void * arg)
 { 
  for(;;)
   {
    
  
 
-          DeserializationError err = deserializeJson(motorDoc, Serial2);
+          DeserializationError err = deserializeJson(motorDoc, Serial);
 
 
 
@@ -112,17 +113,17 @@ void ReciveJsonMessage(void * pvParameters)
             {
               // Print the values
               // (we must use as<T>() to resolve the ambiguity)
-              Serial.print("move = ");
-              Serial.print(motorDoc["move"].as<float>());
-             // move = motorDoc["move"].as<float>();
-              Serial.print("  ; turnValue = ");
-              Serial.println(motorDoc["turn"].as<float>());
-              //turn = motorDoc["turn"].as<float>();
+              //Serial.print("move = ");
+              //Serial.print(motorDoc["move"].as<float>());
+              move = motorDoc["move"].as<float>();
+              //Serial.print("  ; turnValue = ");
+              //Serial.println(motorDoc["turn"].as<float>());
+              turn = motorDoc["turn"].as<float>();
                 while(millis() - lastTime <= TaskTime)
                 {
                   
                 }
-                 xTaskCreatePinnedToCore(MotorControl, "MotorControl", 10000, NULL, 0, &Task2, 1);
+                 xTaskCreate(MotorControl, "MotorControl", 10000, NULL,tskIDLE_PRIORITY, &Task2);
                  //vTaskDelete(NULL);
             } 
           else 
@@ -132,12 +133,12 @@ void ReciveJsonMessage(void * pvParameters)
               Serial.println(err.c_str());
   
               // Flush all bytes in the "link" serial port buffer
-               while (Serial2.available() > 0)
-               Serial2.read();
+               while (Serial.available() > 0)
+               Serial.read();
             }
          
-          //delay(100);
-       
+          
+     
    }
 
 }
@@ -148,23 +149,26 @@ void MotorControl(void *pvParameters)
   //for(;;)
  // { 
       lastTime = millis();
-      if(data.move>0)
+      if(move>0)
         {
-          //pwm.setPWM(0, 0, 500);
-         // Serial.println(move);
+          pwm.setPWM(0, 0, 650);
+         //Serial.println(move);
           
         }
 
       else 
         {
-         // pwm.setPWM(0, 0, 200);
-          // Serial.println(move);
+         pwm.setPWM(0, 0,380);
+        //Serial.println(move);
         }
         TaskTime = millis() - lastTime;
       vTaskDelete(NULL);
-    
+
     
     
     
  // }
+}
+void someFunction(void* arg) {
+  
 }
